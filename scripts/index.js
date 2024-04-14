@@ -1,4 +1,4 @@
-// @todo: Темплейт карточки 
+// @todo: Темплейт карточки
 
 // @todo: DOM узлы
 
@@ -10,12 +10,12 @@
 
 const placesList = document.querySelector(".places__list");
 
-let createCardContent = (imgValue, titleValue, deleteFn) => {
+let createCardElement = (imgValue, titleValue, deleteFn) => {
   const cardTemplate = document.querySelector("#card-template").content;
   const cardElement = cardTemplate.querySelector(".card").cloneNode(true);
-  const deleteButton = cardElement.querySelector(".card__delete-button");
+  const cardDeleteButton = cardElement.querySelector(".card__delete-button");
 
-  deleteButton.addEventListener("click", deleteFn);
+  cardDeleteButton.addEventListener("click", deleteFn);
 
   cardElement.querySelector(".card__image").src = imgValue;
   cardElement.querySelector(".card__title").textContent = titleValue;
@@ -23,10 +23,10 @@ let createCardContent = (imgValue, titleValue, deleteFn) => {
   return cardElement;
 };
 
-let deleteCard = (evt) => {
+let deleteCardElement = (evt) => {
   evt.target.parentNode.remove();
 };
 
 initialCards.forEach((item) => {
-  placesList.append(createCardContent(item.link, item.name, deleteCard));
+  placesList.append(createCardElement(item.link, item.name, deleteCardElement));
 });
