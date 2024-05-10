@@ -51,7 +51,7 @@ const handleEditInfoFormSubmit = (evt) => {
   name.textContent = nameInput.value;
   occupation.textContent = occupationInput.value;
 
-  closeModal(formEditInfo.closest(".popup"));
+  closePopup(formEditInfo.closest(".popup"));
 };
 
 //formNewCard------------------------------------------------------------------------------------------------------------------------------

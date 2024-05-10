@@ -13,7 +13,7 @@ const closePopup = (modal) => {
 };
 
 const closePopupByEsc = (evt) => {
-  if (evt.key === "Escape") {
+  if (evt.key === "Escape" && document.querySelector('.popup_is-opened')) {
     closePopup(document.querySelector(".popup_is-opened"));
   }
 };
