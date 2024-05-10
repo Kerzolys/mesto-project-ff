@@ -6,15 +6,6 @@ const likeCard = (evt) => {
   }
 };
 
-const openImg = (evt) => {
-  const popupImg = document.querySelector(".popup__image");
-  const popupTypeImage = document.querySelector(".popup_type_image");
-  const popupTitle = document.querySelector(".popup__caption");
-  popupTypeImage.classList.add("popup_is-opened");
-  popupImg.src = evt.target.src;
-  popupTitle.textContent = evt.target.alt;
-};
-
 const createCardElement = (
   imgValue,
   altValue,
@@ -38,4 +29,4 @@ const createCardElement = (
   return cardElement;
 };
 
-export { createCardElement, deleteCardElement, likeCard, openImg };
+export { createCardElement, deleteCardElement, likeCard };

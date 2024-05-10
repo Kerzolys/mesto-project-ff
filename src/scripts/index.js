@@ -6,10 +6,13 @@ import {
   createCardElement,
   deleteCardElement,
   likeCard,
-  openImg,
 } from "./components/card.js";
 
-import { openModal, closeModal } from "./components/modal.js";
+import {
+  openPopup,
+  closePopup,
+  closePopupByOverlay,
+} from "./components/modal.js";
 
 const placesList = document.querySelector(".places__list");
 
@@ -21,15 +24,13 @@ const newCardModal = document.querySelector(".popup_type_new-card");
 const closeButtons = document.querySelectorAll(".popup__close");
 const popups = document.querySelectorAll(".popup");
 
-const checkPopupToClose = () => {
-  popups.forEach((popup) => {
-    closeModal(popup);
-    if (popup.classList.contains("popup_type_edit")) {
-      editFormtRender();
-    } else {
-      newCardFormRender();
-    }
-  });
+const openImg = (evt) => {
+  const popupImg = document.querySelector(".popup__image");
+  const popupTypeImage = document.querySelector(".popup_type_image");
+  const popupTitle = document.querySelector(".popup__caption");
+  popupImg.src = evt.target.src;
+  popupTitle.textContent = evt.target.alt;
+  openPopup(popupTypeImage);
 };
 
 // formEditProfile ---------------------------------------------------------------------------------------------------------
@@ -39,20 +40,18 @@ const occupation = document.querySelector(".profile__description");
 const nameInput = formEditInfo.elements.name;
 const occupationInput = formEditInfo.elements.description;
 
-const editFormtRender = () => {
+const editInfoFormRender = () => {
   nameInput.value = name.textContent;
   occupationInput.value = occupation.textContent;
 };
 
-editFormtRender();
-
-const handleFormSubmit = (evt) => {
+const handleEditInfoFormSubmit = (evt) => {
   evt.preventDefault();
 
   name.textContent = nameInput.value;
   occupation.textContent = occupationInput.value;
 
-  closeModal(evt.target.closest(".popup"));
+  closeModal(formEditInfo.closest(".popup"));
 };
 
 //formNewCard------------------------------------------------------------------------------------------------------------------------------
@@ -61,17 +60,16 @@ const newPlace = formAddNewCard.elements["place-name"];
 const link = formAddNewCard.elements.link;
 
 const newCardFormRender = () => {
-  link.value = "";
-  newPlace.value = "";
+  formAddNewCard.reset();
 };
 
 const handleNewCardSubmit = (evt) => {
   evt.preventDefault();
   // проверка на написание пользователем места - первую букву делаем заглавной
-  const capitilized = (string) => string.charAt(0).toUpperCase() + string.slice(1);
+  const capitilized = (string) =>
+    string.charAt(0).toUpperCase() + string.slice(1);
 
-
-  let newCard = createCardElement(
+  const newCard = createCardElement(
     link.value,
     capitilized(newPlace.value),
     capitilized(newPlace.value),
@@ -80,16 +78,9 @@ const handleNewCardSubmit = (evt) => {
     openImg
   );
 
-  initialCards.unshift({
-    name: newPlace.value,
-    link: link.value,
-    alt: newPlace.value,
-  });
   placesList.prepend(newCard);
 
-  closeModal(evt.target.closest(".popup"));
-
-  newCardFormRender();
+  closePopup(formAddNewCard.closest(".popup"));
 };
 
 // вывод карточек ---------------------------------------------------------------------------------------------------------
@@ -108,33 +99,28 @@ initialCards.forEach((item) => {
 
 // обработчики событий ---------------------------------------------------------------------------------------------------------
 infoEditButton.addEventListener("click", () => {
-  openModal(infoEditModal);
+  openPopup(infoEditModal);
+  editInfoFormRender();
 });
 
 newCardButton.addEventListener("click", () => {
-  openModal(newCardModal);
+  openPopup(newCardModal);
+  newCardFormRender();
 });
 
 closeButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    checkPopupToClose();
+    popups.forEach((popup) => {
+      if (popup === button.closest(".popup")) {
+        closePopup(popup);
+      }
+    });
   });
-});
-
-document.addEventListener("keydown", (evt) => {
-  if (evt.key === "Escape") {
-    checkPopupToClose();
-  }
 });
 
 popups.forEach((popup) => {
-  popup.addEventListener("click", (evt) => {
-    if (evt.target.classList.contains("popup")) {
-      checkPopupToClose();
-      closeModal(popup);
-    }
-  });
+  popup.addEventListener("click", closePopupByOverlay);
 });
 
-formEditInfo.addEventListener("submit", handleFormSubmit);
+formEditInfo.addEventListener("submit", handleEditInfoFormSubmit);
 formAddNewCard.addEventListener("submit", handleNewCardSubmit);
