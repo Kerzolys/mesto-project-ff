@@ -1,9 +1,6 @@
 import "../pages/index.css";
 
-import {
-  createCardElement,
-  likeCard,
-} from "./components/card.js";
+import { createCardElement, likeCard } from "./components/card.js";
 
 import {
   openPopup,
@@ -153,18 +150,14 @@ const handleNewCardSubmit = (evt) => {
     alt: capitilized(newPlace.value),
     likes: [],
   };
-  const newCard = createCardElement(
-    newCardObj,
-    likeCard,
-    openImg
-  );
+  const newCard = createCardElement(newCardObj, likeCard, openImg);
   formAddNewCard.querySelector(".button").textContent = "Создание карточки...";
 
   addNewCardtoServer(config, newCardObj)
     .then((cardData) => console.log(cardData))
     .finally(() => {
       formAddNewCard.querySelector(".button").textContent = "Создать";
-      getInitialCards(config).then((cards) => console.log(cards));
+      renderCards()
     });
 
   placesList.prepend(newCard);
@@ -176,73 +169,75 @@ const handleNewCardSubmit = (evt) => {
 const formDeleteCardConfirmaion = document.forms["delete-confirmation"];
 
 // рендер карточек ---------------------------------------------------------------------------------------------------------
-getInitialCards(config).then((cards) => {
-  console.log(cards);
-  const allCards = cards;
-  // вывод всех карточек
-  allCards.forEach((card) => {
-    placesList.append(createCardElement(card, likeCard, openImg));
-  });
-  // получаем массив DOM-карточек
-  const cardsArray = placesList.querySelectorAll(".card");
-  // рендер карточек без кнопки удаления
-  allCards.filter((card, notMyCardIndex) => {
-    if (card.owner._id !== userId) {
-      cardsArray[notMyCardIndex].querySelector(
-        ".card__delete-button"
-      ).style.display = "none";
-    }
-  });
-  // рендеринг отлайканных мною карточек
-  allCards.forEach((card, cardIndex) => {
-    card.likes.forEach((cardLike) => {
-      if (cardLike._id === userId) {
-        cardsArray[cardIndex]
-          .querySelector(".card__like-button")
-          .classList.add("card__like-button_is-active");
+const renderCards = () => {
+  getInitialCards(config).then((cards) => {
+    const allCards = cards;
+    // вывод всех карточек
+    allCards.forEach((card) => {
+      placesList.append(createCardElement(card, likeCard, openImg));
+    });
+    // получаем массив DOM-карточек
+    const cardsArray = placesList.querySelectorAll(".card");
+    // рендер карточек без кнопки удаления
+    allCards.filter((card, notMyCardIndex) => {
+      if (card.owner._id !== userId) {
+        cardsArray[notMyCardIndex].querySelector(
+          ".card__delete-button"
+        ).style.display = "none";
       }
     });
-  });
-  // взаимодействие с карточкой: удаление, лайк и анлайк
-  cardsArray.forEach((card, index) => {
-    //назодим элементы для взаимодействия
-    const cardDeleteButton = card.querySelector(".card__delete-button");
-    const cardLikeButton = card.querySelector(".card__like-button");
-    const cardLikeCounter = card.querySelector(".card__like-counter");
-    //удаление карточки
-    cardDeleteButton.addEventListener("click", () => {
-      openPopup(cardDeleteConfirmationModal);
-      formDeleteCardConfirmaion.addEventListener("submit", (evt) => {
-        evt.preventDefault();
-        formDeleteCardConfirmaion.querySelector(".button").textContent =
-          "Удаление карточки...";
-        deleteCardFromServer(config, cards[index]._id)
-          .then(() => {
-            closePopup(cardDeleteConfirmationModal);
-            cardsArray[index].remove();
-          })
-          .finally(() => {
-            formDeleteCardConfirmaion.querySelector(".button").textContent =
-              "Да";
-          });
+    // рендеринг отлайканных мною карточек
+    allCards.forEach((card, cardIndex) => {
+      card.likes.forEach((cardLike) => {
+        if (cardLike._id === userId) {
+          cardsArray[cardIndex]
+            .querySelector(".card__like-button")
+            .classList.add("card__like-button_is-active");
+        }
       });
     });
-    //лайк/анлайк
-    cardLikeButton.addEventListener("click", () => {
-      //проверка на наличие класса лайка у кнопки лайка
-      if (cardLikeButton.classList.contains("card__like-button_is-active")) {
-        deleteLike(config, cards[index]._id).then((likes) => {
-          cardLikeCounter.textContent = likes.likes.length;
+    // взаимодействие с карточкой: удаление, лайк и анлайк
+    cardsArray.forEach((card, index) => {
+      //назодим элементы для взаимодействия
+      const cardDeleteButton = card.querySelector(".card__delete-button");
+      const cardLikeButton = card.querySelector(".card__like-button");
+      const cardLikeCounter = card.querySelector(".card__like-counter");
+      //удаление карточки
+      cardDeleteButton.addEventListener("click", () => {
+        openPopup(cardDeleteConfirmationModal);
+        formDeleteCardConfirmaion.addEventListener("submit", (evt) => {
+          evt.preventDefault();
+          formDeleteCardConfirmaion.querySelector(".button").textContent =
+            "Удаление карточки...";
+          deleteCardFromServer(config, cards[index]._id)
+            .then(() => {
+              closePopup(cardDeleteConfirmationModal);
+              cardsArray[index].remove();
+            })
+            .finally(() => {
+              formDeleteCardConfirmaion.querySelector(".button").textContent =
+                "Да";
+            });
         });
-      } else {
-        putLike(config, cards[index]._id).then((likes) => {
-          cardLikeCounter.textContent = likes.likes.length;
-        });
-      }
+      });
+      //лайк/анлайк
+      cardLikeButton.addEventListener("click", () => {
+        //проверка на наличие класса лайка у кнопки лайка
+        if (cardLikeButton.classList.contains("card__like-button_is-active")) {
+          deleteLike(config, cards[index]._id).then((likes) => {
+            cardLikeCounter.textContent = likes.likes.length;
+          });
+        } else {
+          putLike(config, cards[index]._id).then((likes) => {
+            cardLikeCounter.textContent = likes.likes.length;
+          });
+        }
+      });
     });
   });
-});
+};
 
+renderCards()
 // обработчики событий ---------------------------------------------------------------------------------------------------------
 infoEditButton.addEventListener("click", () => {
   //открываем попап
