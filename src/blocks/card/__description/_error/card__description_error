@@ -1,0 +1,3 @@
+.card__description_error {
+  margin-block-start: 268px;
+}
