@@ -9,18 +9,7 @@ import {
 } from "./components/modal.js";
 
 import { clearValidation, enableValidation } from "./components/validation.js";
-
-import {
-  getUser,
-  editUser,
-  editUserAvatar,
-  getInitialCards,
-  addNewCardtoServer,
-  deleteCardFromServer,
-  putLike,
-  deleteLike,
-  handleError,
-} from "./components/api.js";
+import { apiFns, handleError } from './components/api.js'
 import { config } from "./components/configAPI.js";
 import { configValidation } from "./components/configValidation.js";
 
@@ -42,13 +31,6 @@ const popupImg = document.querySelector(".popup__image");
 const popupTypeImage = document.querySelector(".popup_type_image");
 const popupTitle = document.querySelector(".popup__caption");
 
-const openImg = (evt) => {
-  popupImg.src = evt.target.src;
-  popupImg.alt = evt.target.alt;
-  popupTitle.textContent = evt.target.alt;
-  openPopup(popupTypeImage);
-};
-
 // USER--------------------------------------
 
 //вывод пользователя------------------------------------------------------------------------------------------------------------
@@ -60,8 +42,6 @@ const renderUser = (userObj, userData) => {
 const renderAvatar = (userObj, userData) => {
   userObj.avatar.style.backgroundImage = `url(${userData.avatar})`;
 };
-
-let userId;
 
 // formEditProfile ---------------------------------------------------------------------------------------------------------
 const formEditProfile = document.forms["edit-profile"];
@@ -79,7 +59,7 @@ const handleEditInfoFormSubmit = (evt) => {
   // отправляем на сервер новые данные профиля
   formEditProfile.querySelector(".button").textContent = "Сохранение...";
 
-  editUser(config, {
+  apiFns.editUser(config, {
     name: nameInput.value,
     about: descriptionInput.value,
   })
@@ -115,7 +95,7 @@ const handleEditAvatarFormSubmit = (evt) => {
   formEditAvatar.querySelector(".button").textContent = "Сохранение...";
 
   // отправляем на сервер новые данные (ссылку) аватара
-  editUserAvatar(config, { avatar: avatarInput.value })
+  apiFns.editUserAvatar(config, { avatar: avatarInput.value })
     .then(() => {
       //присваиваем новые данные элементу avatar (DOM)
       avatar.style.backgroundImage = `url(${avatarInput.value})`;
@@ -159,15 +139,9 @@ const handleNewCardSubmit = (evt) => {
 
   formAddNewCard.querySelector(".button").textContent = "Создание карточки...";
 
-  addNewCardtoServer(config, newCardObj)
+  apiFns.addNewCardtoServer(config, newCardObj)
     .then((cardData) => {
-      const newCard = createCardElement(
-        cardData,
-        userId,
-        handleLikeCard,
-        openImg,
-        handleDeleteCard
-      );
+      const newCard = createCardElement(cardData, userId, handleCardFns);
       placesList.prepend(newCard);
       closePopup(formAddNewCard.closest(".popup"));
     })
@@ -181,46 +155,52 @@ const handleNewCardSubmit = (evt) => {
 };
 
 // рендер карточек ---------------------------------------------------------------------------------------------------------
-Promise.all([getInitialCards(config), getUser(config)]).then(
+let userId;
+
+export const handleCardFns = {
+  handlelikeFn: (evt, cardId, likeCounter) => {
+    // evt - event.target для отрисовки лайка
+    // cardId - айди карточки для лайка
+    // likeCounter - элемент для отрисовки кол-ва лайков
+    if (evt.target.classList.contains("card__like-button_is-active")) {
+      apiFns.deleteLike(config, cardId).then((likes) => {
+        likeCounter.textContent = likes.likes.length;
+        likeCard(evt);
+      });
+    } else {
+      apiFns.putLike(config, cardId).then((likes) => {
+        likeCounter.textContent = likes.likes.length;
+        likeCard(evt);
+      });
+    }
+  },
+  openFn: (evt) => {
+    popupImg.src = evt.target.src;
+    popupImg.alt = evt.target.alt;
+    popupTitle.textContent = evt.target.alt;
+    openPopup(popupTypeImage);
+  },
+  handleDeleteFn: (cardEl, cardId) => {
+    // cardEl - DOM элемент карточки
+    // cardId - айди карточки для лайка
+    openPopup(cardDeleteConfirmationModal);
+    formDeleteCardConfirmaion.addEventListener("submit", (evt) => {
+      handleDeleteCardConfirmation(evt, cardEl, cardId);
+    });
+  },
+};
+
+Promise.all([apiFns.getInitialCards(config), apiFns.getUser(config)]).then(
   ([allCards, userData]) => {
     renderUser(user, userData);
     renderAvatar(user, userData);
     userId = userData._id;
     allCards.forEach((card) => {
       const userId = userData._id;
-      placesList.append(
-        createCardElement(
-          card,
-          userId,
-          handleLikeCard,
-          openImg,
-          handleDeleteCard
-        )
-      );
+      placesList.append(createCardElement(card, userId, handleCardFns));
     });
   }
 );
-
-const handleDeleteCard = (cardEl, cardId) => {
-  openPopup(cardDeleteConfirmationModal);
-  formDeleteCardConfirmaion.addEventListener("submit", (evt) => {
-    handleDeleteCardConfirmation(evt, cardEl, cardId);
-  });
-};
-
-const handleLikeCard = (evt, cardId, likeCounter) => {
-  if (evt.target.classList.contains("card__like-button_is-active")) {
-    deleteLike(config, cardId).then((likes) => {
-      likeCounter.textContent = likes.likes.length;
-      likeCard(evt);
-    });
-  } else {
-    putLike(config, cardId).then((likes) => {
-      likeCounter.textContent = likes.likes.length;
-      likeCard(evt);
-    });
-  }
-};
 
 // форма удаления карточки
 const formDeleteCardConfirmaion = document.forms["delete-confirmation"];
@@ -230,7 +210,7 @@ const handleDeleteCardConfirmation = (evt, cardEl, cardId) => {
 
   formDeleteCardConfirmaion.querySelector(".button").textContent =
     "Удаление карточки...";
-  deleteCardFromServer(config, cardId)
+    apiFns.deleteCardFromServer(config, cardId)
     .then(() => {
       closePopup(cardDeleteConfirmationModal);
       deleteCard(cardEl);
@@ -281,4 +261,3 @@ popups.forEach((popup) => {
 formEditProfile.addEventListener("submit", handleEditInfoFormSubmit);
 formEditAvatar.addEventListener("submit", handleEditAvatarFormSubmit);
 formAddNewCard.addEventListener("submit", handleNewCardSubmit);
-

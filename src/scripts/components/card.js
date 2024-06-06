@@ -25,9 +25,7 @@ const handleImageOnload = (cardEl) => {
 const createCardElement = (
   cardData,
   userId,
-  handlelikeFn,
-  openFn,
-  handleDeleteFn
+  handleCardFns
 ) => {
   const cardTemplate = document.querySelector("#card-template").content;
   const cardElement = cardTemplate.querySelector(".card").cloneNode(true);
@@ -41,7 +39,7 @@ const createCardElement = (
     cardDeleteButton.style.display = "none";
   }
   cardDeleteButton.addEventListener("click", (evt) => {
-    handleDeleteFn(cardElement, cardData._id);
+    handleCardFns.handleDeleteFn(cardElement, cardData._id);
   });
   const cardImage = cardElement.querySelector(".card__image");
   const cardDescription = cardElement.querySelector(".card__description");
@@ -58,9 +56,9 @@ const createCardElement = (
   });
 
   cardLikeButton.addEventListener("click", (evt) => {
-    handlelikeFn(evt, cardData._id, cardLikeCounter);
+    handleCardFns.handlelikeFn(evt, cardData._id, cardLikeCounter);
   });
-  cardElement.querySelector(".card__image").addEventListener("click", openFn);
+  cardElement.querySelector(".card__image").addEventListener("click", handleCardFns.openFn);
 
   cardElement.querySelector(".card__image").src = cardData.link;
   cardElement.querySelector(".card__image").alt = cardData.name;
