@@ -87,9 +87,6 @@ const clearValidation = (validationConfig, formElement) => {
   });
 };
 
-// const clearValidation = () => {
-// };
-
 const enableValidation = (validationConfig) => {
   const formList = document.querySelectorAll(validationConfig.formSelector);
   formList.forEach((formElement) => {

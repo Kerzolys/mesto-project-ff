@@ -1,3 +1,7 @@
+const deleteCard = (el) => {
+  el.remove();
+};
+
 const likeCard = (evt) => {
   if (evt.target.classList.contains("card__like-button")) {
     evt.target.classList.toggle("card__like-button_is-active");
@@ -18,11 +22,27 @@ const handleImageOnload = (cardEl) => {
   cardEl.classList.remove("card__description_error");
 };
 
-const createCardElement = (card, likeFn, openFn) => {
+const createCardElement = (
+  cardData,
+  userId,
+  handlelikeFn,
+  openFn,
+  handleDeleteFn
+) => {
   const cardTemplate = document.querySelector("#card-template").content;
   const cardElement = cardTemplate.querySelector(".card").cloneNode(true);
   const cardDeleteButton = cardElement.querySelector(".card__delete-button");
+  const cardLikeButton = cardElement.querySelector(".card__like-button");
+  const cardLikeCounter = cardElement.querySelector(".card__like-counter");
 
+  const ownerId = cardData.owner._id;
+
+  if (ownerId !== userId) {
+    cardDeleteButton.style.display = "none";
+  }
+  cardDeleteButton.addEventListener("click", (evt) => {
+    handleDeleteFn(cardElement, cardData._id);
+  });
   const cardImage = cardElement.querySelector(".card__image");
   const cardDescription = cardElement.querySelector(".card__description");
 
@@ -31,16 +51,24 @@ const createCardElement = (card, likeFn, openFn) => {
 
   cardImage.onload = () => handleImageOnload(cardDescription);
 
-  cardElement.addEventListener("click", likeFn);
+  cardData.likes.forEach((like) => {
+    if (like._id === userId) {
+      cardLikeButton.classList.add("card__like-button_is-active");
+    }
+  });
+
+  cardLikeButton.addEventListener("click", (evt) => {
+    handlelikeFn(evt, cardData._id, cardLikeCounter);
+  });
   cardElement.querySelector(".card__image").addEventListener("click", openFn);
 
-  cardElement.querySelector(".card__image").src = card.link;
-  cardElement.querySelector(".card__image").alt = card.name;
-  cardElement.querySelector(".card__title").textContent = card.name;
+  cardElement.querySelector(".card__image").src = cardData.link;
+  cardElement.querySelector(".card__image").alt = cardData.name;
+  cardElement.querySelector(".card__title").textContent = cardData.name;
   cardElement.querySelector(".card__like-counter").textContent =
-    card.likes.length;
+    cardData.likes.length;
 
   return cardElement;
 };
 
-export { createCardElement, likeCard };
+export { createCardElement, likeCard, deleteCard };

@@ -1,6 +1,6 @@
 import "../pages/index.css";
 
-import { createCardElement, likeCard } from "./components/card.js";
+import { createCardElement, likeCard, deleteCard } from "./components/card.js";
 
 import {
   openPopup,
@@ -19,6 +19,7 @@ import {
   deleteCardFromServer,
   putLike,
   deleteLike,
+  handleError,
 } from "./components/api.js";
 import { config } from "./components/configAPI.js";
 import { configValidation } from "./components/configValidation.js";
@@ -37,12 +38,13 @@ const cardDeleteConfirmationModal = document.querySelector(
 );
 const closeButtons = document.querySelectorAll(".popup__close");
 const popups = document.querySelectorAll(".popup");
+const popupImg = document.querySelector(".popup__image");
+const popupTypeImage = document.querySelector(".popup_type_image");
+const popupTitle = document.querySelector(".popup__caption");
 
 const openImg = (evt) => {
-  const popupImg = document.querySelector(".popup__image");
-  const popupTypeImage = document.querySelector(".popup_type_image");
-  const popupTitle = document.querySelector(".popup__caption");
   popupImg.src = evt.target.src;
+  popupImg.alt = evt.target.alt;
   popupTitle.textContent = evt.target.alt;
   openPopup(popupTypeImage);
 };
@@ -61,18 +63,12 @@ const renderAvatar = (userObj, userData) => {
 
 let userId;
 
-getUser(config).then((userData) => {
-  renderUser(user, userData);
-  renderAvatar(user, userData);
-  userId = userData._id;
-});
-
 // formEditProfile ---------------------------------------------------------------------------------------------------------
 const formEditProfile = document.forms["edit-profile"];
 
 const nameInput = formEditProfile.elements.name;
 const descriptionInput = formEditProfile.elements.description;
-// console.log(formEditProfile.querySelector('.button').textContent)
+
 const editProfileFormRender = () => {
   nameInput.value = name.textContent;
   descriptionInput.value = description.textContent;
@@ -86,12 +82,15 @@ const handleEditInfoFormSubmit = (evt) => {
   editUser(config, {
     name: nameInput.value,
     about: descriptionInput.value,
-  }).finally(() => {
-    formEditProfile.querySelector(".button").textContent = "Сохранить";
-  });
-
-  name.textContent = nameInput.value;
-  description.textContent = descriptionInput.value;
+  })
+    .then(() => {
+      name.textContent = nameInput.value;
+      description.textContent = descriptionInput.value;
+    })
+    .catch((error) => handleError(error))
+    .finally(() => {
+      formEditProfile.querySelector(".button").textContent = "Сохранить";
+    });
 
   closePopup(formEditProfile.closest(".popup"));
 };
@@ -116,13 +115,20 @@ const handleEditAvatarFormSubmit = (evt) => {
   formEditAvatar.querySelector(".button").textContent = "Сохранение...";
 
   // отправляем на сервер новые данные (ссылку) аватара
-  editUserAvatar(config, { avatar: avatarInput.value }).finally(() => {
-    formEditAvatar.querySelector(".button").textContent = "Сохранить";
-  });
-  //присваеваем новые данные элементу avatar (DOM)
-  avatar.style.backgroundImage = `url(${avatarInput.value})`;
-
-  closePopup(formEditAvatar.closest(".popup"));
+  editUserAvatar(config, { avatar: avatarInput.value })
+    .then(() => {
+      //присваиваем новые данные элементу avatar (DOM)
+      avatar.style.backgroundImage = `url(${avatarInput.value})`;
+      closePopup(formEditAvatar.closest(".popup"));
+    })
+    .catch((error) => handleError(error))
+    .finally(() => {
+      formEditAvatar.querySelector(".button").textContent = "Сохранить";
+      formEditAvatar.querySelector(".button").disabled = true;
+      formEditAvatar
+        .querySelector(".button")
+        .classList.add("popup__button_disabled");
+    });
 };
 
 //ВАЛИДАЦИЯ ФОРМ------------------------
@@ -150,109 +156,98 @@ const handleNewCardSubmit = (evt) => {
     alt: capitilized(newPlace.value),
     likes: [],
   };
-  const newCard = createCardElement(newCardObj, likeCard, openImg);
+
   formAddNewCard.querySelector(".button").textContent = "Создание карточки...";
 
   addNewCardtoServer(config, newCardObj)
-    .then((cardData) => console.log(cardData))
+    .then((cardData) => {
+      const newCard = createCardElement(
+        cardData,
+        userId,
+        handleLikeCard,
+        openImg,
+        handleDeleteCard
+      );
+      placesList.prepend(newCard);
+      closePopup(formAddNewCard.closest(".popup"));
+    })
     .finally(() => {
       formAddNewCard.querySelector(".button").textContent = "Создать";
-      renderCards()
+      formAddNewCard.querySelector(".button").disabled = true;
+      formAddNewCard
+        .querySelector(".button")
+        .classList.add("popup__button_disabled");
     });
+};
 
-  placesList.prepend(newCard);
+// рендер карточек ---------------------------------------------------------------------------------------------------------
+Promise.all([getInitialCards(config), getUser(config)]).then(
+  ([allCards, userData]) => {
+    renderUser(user, userData);
+    renderAvatar(user, userData);
+    userId = userData._id;
+    allCards.forEach((card) => {
+      const userId = userData._id;
+      placesList.append(
+        createCardElement(
+          card,
+          userId,
+          handleLikeCard,
+          openImg,
+          handleDeleteCard
+        )
+      );
+    });
+  }
+);
 
-  closePopup(formAddNewCard.closest(".popup"));
+const handleDeleteCard = (cardEl, cardId) => {
+  openPopup(cardDeleteConfirmationModal);
+  formDeleteCardConfirmaion.addEventListener("submit", (evt) => {
+    handleDeleteCardConfirmation(evt, cardEl, cardId);
+  });
+};
+
+const handleLikeCard = (evt, cardId, likeCounter) => {
+  if (evt.target.classList.contains("card__like-button_is-active")) {
+    deleteLike(config, cardId).then((likes) => {
+      likeCounter.textContent = likes.likes.length;
+      likeCard(evt);
+    });
+  } else {
+    putLike(config, cardId).then((likes) => {
+      likeCounter.textContent = likes.likes.length;
+      likeCard(evt);
+    });
+  }
 };
 
 // форма удаления карточки
 const formDeleteCardConfirmaion = document.forms["delete-confirmation"];
 
-// рендер карточек ---------------------------------------------------------------------------------------------------------
-const renderCards = () => {
-  getInitialCards(config).then((cards) => {
-    const allCards = cards;
-    // вывод всех карточек
-    allCards.forEach((card) => {
-      placesList.append(createCardElement(card, likeCard, openImg));
+const handleDeleteCardConfirmation = (evt, cardEl, cardId) => {
+  evt.preventDefault();
+
+  formDeleteCardConfirmaion.querySelector(".button").textContent =
+    "Удаление карточки...";
+  deleteCardFromServer(config, cardId)
+    .then(() => {
+      closePopup(cardDeleteConfirmationModal);
+      deleteCard(cardEl);
+    })
+    .catch(handleError)
+    .finally(() => {
+      formDeleteCardConfirmaion.querySelector(".button").textContent = "Да";
     });
-    // получаем массив DOM-карточек
-    const cardsArray = placesList.querySelectorAll(".card");
-    // рендер карточек без кнопки удаления
-    allCards.filter((card, notMyCardIndex) => {
-      if (card.owner._id !== userId) {
-        cardsArray[notMyCardIndex].querySelector(
-          ".card__delete-button"
-        ).style.display = "none";
-      }
-    });
-    // рендеринг отлайканных мною карточек
-    allCards.forEach((card, cardIndex) => {
-      card.likes.forEach((cardLike) => {
-        if (cardLike._id === userId) {
-          cardsArray[cardIndex]
-            .querySelector(".card__like-button")
-            .classList.add("card__like-button_is-active");
-        }
-      });
-    });
-    // взаимодействие с карточкой: удаление, лайк и анлайк
-    cardsArray.forEach((card, index) => {
-      //назодим элементы для взаимодействия
-      const cardDeleteButton = card.querySelector(".card__delete-button");
-      const cardLikeButton = card.querySelector(".card__like-button");
-      const cardLikeCounter = card.querySelector(".card__like-counter");
-      //удаление карточки
-      cardDeleteButton.addEventListener("click", () => {
-        openPopup(cardDeleteConfirmationModal);
-        formDeleteCardConfirmaion.addEventListener("submit", (evt) => {
-          evt.preventDefault();
-          formDeleteCardConfirmaion.querySelector(".button").textContent =
-            "Удаление карточки...";
-          deleteCardFromServer(config, cards[index]._id)
-            .then(() => {
-              closePopup(cardDeleteConfirmationModal);
-              cardsArray[index].remove();
-            })
-            .finally(() => {
-              formDeleteCardConfirmaion.querySelector(".button").textContent =
-                "Да";
-            });
-        });
-      });
-      //лайк/анлайк
-      cardLikeButton.addEventListener("click", () => {
-        //проверка на наличие класса лайка у кнопки лайка
-        if (cardLikeButton.classList.contains("card__like-button_is-active")) {
-          deleteLike(config, cards[index]._id).then((likes) => {
-            cardLikeCounter.textContent = likes.likes.length;
-          });
-        } else {
-          putLike(config, cards[index]._id).then((likes) => {
-            cardLikeCounter.textContent = likes.likes.length;
-          });
-        }
-      });
-    });
-  });
 };
 
-renderCards()
 // обработчики событий ---------------------------------------------------------------------------------------------------------
 infoEditButton.addEventListener("click", () => {
   //открываем попап
   openPopup(infoEditModal);
   //рендерим форму
   editProfileFormRender();
-  clearValidation(
-    {
-      formSelector: ".popup__form",
-      inputSelector: ".popup__input",
-      inputErrorClass: "popup__input_error",
-      errorClass: "popup__input_type-error_active",
-    },
-    formEditProfile
-  );
+  clearValidation(configValidation, formEditProfile);
 });
 
 newCardButton.addEventListener("click", () => {
@@ -260,29 +255,13 @@ newCardButton.addEventListener("click", () => {
   openPopup(newCardModal);
   //рендерим форму
   renderForm(formAddNewCard);
-  clearValidation(
-    {
-      formSelector: ".popup__form",
-      inputSelector: ".popup__input",
-      inputErrorClass: "popup__input_error",
-      errorClass: "popup__input_type-error_active",
-    },
-    formAddNewCard
-  );
+  clearValidation(configValidation, formAddNewCard);
 });
 
 editAvatarButton.addEventListener("click", () => {
   openPopup(editAvatarModal);
   renderForm(formEditAvatar);
-  clearValidation(
-    {
-      formSelector: ".popup__form",
-      inputSelector: ".popup__input",
-      inputErrorClass: "popup__input_error",
-      errorClass: "popup__input_type-error_active",
-    },
-    formEditAvatar
-  );
+  clearValidation(configValidation, formEditAvatar);
 });
 
 closeButtons.forEach((button) => {
@@ -302,3 +281,4 @@ popups.forEach((popup) => {
 formEditProfile.addEventListener("submit", handleEditInfoFormSubmit);
 formEditAvatar.addEventListener("submit", handleEditAvatarFormSubmit);
 formAddNewCard.addEventListener("submit", handleNewCardSubmit);
+

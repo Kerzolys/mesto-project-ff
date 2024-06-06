@@ -1,8 +1,10 @@
 const handleResponse = (response) => {
   if (response.ok) {
     return response.json();
-  }
+  } 
 };
+
+const handleError = (error) => console.log(error);
 
 const getUser = (config) => {
   return fetch(`${config.baseUrl}/users/me`, {
@@ -70,4 +72,5 @@ export {
   deleteCardFromServer,
   putLike,
   deleteLike,
+  handleError
 };
