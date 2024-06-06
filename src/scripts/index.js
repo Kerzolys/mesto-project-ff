@@ -9,7 +9,7 @@ import {
 } from "./components/modal.js";
 
 import { clearValidation, enableValidation } from "./components/validation.js";
-import { apiFns, handleError } from './components/api.js'
+import { apiFns, handleError } from "./components/api.js";
 import { config } from "./components/configAPI.js";
 import { configValidation } from "./components/configValidation.js";
 
@@ -30,6 +30,15 @@ const popups = document.querySelectorAll(".popup");
 const popupImg = document.querySelector(".popup__image");
 const popupTypeImage = document.querySelector(".popup_type_image");
 const popupTitle = document.querySelector(".popup__caption");
+
+const disableSubmitButton = (form) => {
+  form.querySelector(".button").disabled = true;
+  form.querySelector(".button").classList.add("popup__button_disabled");
+};
+
+const handleSubmitButtonTextContent = (form, text) => {
+  form.querySelector(".button").textContent = text;
+};
 
 // USER--------------------------------------
 
@@ -57,22 +66,22 @@ const editProfileFormRender = () => {
 const handleEditInfoFormSubmit = (evt) => {
   evt.preventDefault();
   // отправляем на сервер новые данные профиля
-  formEditProfile.querySelector(".button").textContent = "Сохранение...";
+  handleSubmitButtonTextContent(formEditProfile, "Сохранение...");
 
-  apiFns.editUser(config, {
-    name: nameInput.value,
-    about: descriptionInput.value,
-  })
+  apiFns
+    .editUser(config, {
+      name: nameInput.value,
+      about: descriptionInput.value,
+    })
     .then(() => {
       name.textContent = nameInput.value;
       description.textContent = descriptionInput.value;
+      closePopup(formEditProfile.closest(".popup"));
     })
     .catch((error) => handleError(error))
     .finally(() => {
-      formEditProfile.querySelector(".button").textContent = "Сохранить";
+      handleSubmitButtonTextContent(formEditProfile, "Сохранить");
     });
-
-  closePopup(formEditProfile.closest(".popup"));
 };
 
 //formEditAvatar--------------------------
@@ -92,10 +101,10 @@ const user = {
 
 const handleEditAvatarFormSubmit = (evt) => {
   evt.preventDefault();
-  formEditAvatar.querySelector(".button").textContent = "Сохранение...";
-
+  handleSubmitButtonTextContent(formEditAvatar, "Сохранение...");
   // отправляем на сервер новые данные (ссылку) аватара
-  apiFns.editUserAvatar(config, { avatar: avatarInput.value })
+  apiFns
+    .editUserAvatar(config, { avatar: avatarInput.value })
     .then(() => {
       //присваиваем новые данные элементу avatar (DOM)
       avatar.style.backgroundImage = `url(${avatarInput.value})`;
@@ -103,11 +112,8 @@ const handleEditAvatarFormSubmit = (evt) => {
     })
     .catch((error) => handleError(error))
     .finally(() => {
-      formEditAvatar.querySelector(".button").textContent = "Сохранить";
-      formEditAvatar.querySelector(".button").disabled = true;
-      formEditAvatar
-        .querySelector(".button")
-        .classList.add("popup__button_disabled");
+      handleSubmitButtonTextContent(formEditAvatar, "Сохранить");
+      disableSubmitButton(formEditAvatar);
     });
 };
 
@@ -137,20 +143,18 @@ const handleNewCardSubmit = (evt) => {
     likes: [],
   };
 
-  formAddNewCard.querySelector(".button").textContent = "Создание карточки...";
+  handleSubmitButtonTextContent(formAddNewCard, "Создание карточки...");
 
-  apiFns.addNewCardtoServer(config, newCardObj)
+  apiFns
+    .addNewCardtoServer(config, newCardObj)
     .then((cardData) => {
       const newCard = createCardElement(cardData, userId, handleCardFns);
       placesList.prepend(newCard);
       closePopup(formAddNewCard.closest(".popup"));
     })
     .finally(() => {
-      formAddNewCard.querySelector(".button").textContent = "Создать";
-      formAddNewCard.querySelector(".button").disabled = true;
-      formAddNewCard
-        .querySelector(".button")
-        .classList.add("popup__button_disabled");
+      handleSubmitButtonTextContent(formAddNewCard, "Создать");
+      disableSubmitButton(formAddNewCard);
     });
 };
 
@@ -207,17 +211,19 @@ const formDeleteCardConfirmaion = document.forms["delete-confirmation"];
 
 const handleDeleteCardConfirmation = (evt, cardEl, cardId) => {
   evt.preventDefault();
-
-  formDeleteCardConfirmaion.querySelector(".button").textContent =
-    "Удаление карточки...";
-    apiFns.deleteCardFromServer(config, cardId)
+  handleSubmitButtonTextContent(
+    formDeleteCardConfirmaion,
+    "Удаление карточки..."
+  );
+  apiFns
+    .deleteCardFromServer(config, cardId)
     .then(() => {
       closePopup(cardDeleteConfirmationModal);
       deleteCard(cardEl);
     })
     .catch(handleError)
     .finally(() => {
-      formDeleteCardConfirmaion.querySelector(".button").textContent = "Да";
+      handleSubmitButtonTextContent(formDeleteCardConfirmaion, "Да");
     });
 };
 
